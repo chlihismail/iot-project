@@ -1,39 +1,33 @@
 #include <ESP8266WiFi.h>
-#include <FirebaseArduino.h>
+#include <FirebaseESP8266.h>
 
-const int in_pir = 4;   // D2 on NodeMCU
-const int out_pir = 14; // D5 on NodeMCU
+// WiFi credentials
+#define WIFI_SSID "gfsdgdfsgdfsg"
+#define WIFI_PASSWORD "gfdgdfsgdfsg"
 
-#define FIREBASE_HOST "your-project-id.firebaseio.com"
-#define FIREBASE_AUTH "your_firebase_database_secret"
-#define WIFI_SSID "your_wifi_ssid"
-#define WIFI_PASSWORD "your_wifi_password"
+// Firebase config
+#define FIREBASE_HOST "qsdfsdqfsdqfsdqfsdqfsdqfsdqf"
+#define FIREBASE_AUTH "sdqfsdqfsdqfsdqfsdqfsdq"
+
+// Firebase setup objects
+FirebaseData firebaseData;
+FirebaseAuth auth;
+FirebaseConfig config;
+
+// PIR sensor pins (NodeMCU pins)
+const int in_pir = 4;
+const int out_pir = 14;
 
 int enter = 0;
-int exit = 0;
+int exitCount = 0;
 bool last_in = false;
 bool last_out = false;
 
-void setFirebaseValues(int entry, int exit) {
-  Firebase.setInt("enter", entry);
-  if (Firebase.failed()) {
-    Serial.print("Firebase set failed: ");
-    Serial.println(Firebase.error());
-  }
-
-  Firebase.setInt("exit", exit);
-  if (Firebase.failed()) {
-    Serial.print("Firebase set failed: ");
-    Serial.println(Firebase.error());
-  }
-}
-
 void setup() {
-  pinMode(in_pir, INPUT);
-  pinMode(out_pir, INPUT);
-
   Serial.begin(9600);
-  delay(500);
+
+  pinMode(in_pir, INPUT);
+  pinMode(out_pir,INPUT);
 
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to Wi-Fi");
@@ -43,30 +37,51 @@ void setup() {
   }
   Serial.println(" connected");
 
-  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
-  setFirebaseValues(enter, exit);
+  // Set Firebase credentials
+  config.host = FIREBASE_HOST;
+  config.signer.tokens.legacy_token = FIREBASE_AUTH;
+
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
+
+  Firebase.setInt(firebaseData, "/enter", enter);
+  Firebase.setInt(firebaseData, "/exit", exitCount);
 }
 
 void loop() {
-  bool in = digitalRead(in_pir);
-  bool out = digitalRead(out_pir);
+if (Firebase.getInt(firebaseData, "/enter")) {
+  enter = firebaseData.intData();
+} else {
+  Serial.println("Failed to read /enter from Firebase");
+}
+
+if (Firebase.getInt(firebaseData, "/exit")) {
+  exitCount = firebaseData.intData();
+} else {
+  Serial.println("Failed to read /exit from Firebase");
+}
+
+
+ bool in = digitalRead(in_pir);
+ bool out = digitalRead(out_pir) ; 
 
   if (in && !last_in) {
     enter++;
     Serial.print("Entry detected: ");
     Serial.println(enter);
-    setFirebaseValues(enter, exit);
+    Firebase.setInt(firebaseData, "/enter", enter);
   }
 
-  if (out && !last_out) {
-    exit++;
-    Serial.print("Exit detected: ");
-    Serial.println(exit);
-    setFirebaseValues(enter, exit);
+    if (out && !last_out) {
+    exitCount++;
+    Serial.print("exit detected: ");
+    Serial.println(exitCount);
+    Firebase.setInt(firebaseData, "/exit", exitCount);
   }
+
 
   last_in = in;
-  last_out = out;
+  last_out = out ; 
 
   delay(100);
 }
