@@ -15,7 +15,7 @@ FirebaseAuth auth;
 FirebaseConfig config;
 
 // PIR sensor pins (NodeMCU pins)
-const int in_pir = 4;
+const int in_pir = 12;
 const int out_pir = 14;
 
 int enter = 0;
@@ -65,23 +65,19 @@ if (Firebase.getInt(firebaseData, "/exit")) {
  bool in = digitalRead(in_pir);
  bool out = digitalRead(out_pir) ; 
 
-  if (in && !last_in) {
-    enter++;
+  if (in && !out) {
+    enter++ ; 
     Serial.print("Entry detected: ");
     Serial.println(enter);
     Firebase.setInt(firebaseData, "/enter", enter);
-  }
-
-    if (out && !last_out) {
-    exitCount++;
+    delay(500) ; 
+  }else if (out && !in){
+    exitCount++ ; 
     Serial.print("exit detected: ");
     Serial.println(exitCount);
     Firebase.setInt(firebaseData, "/exit", exitCount);
+    delay(500) ; 
   }
-
-
-  last_in = in;
-  last_out = out ; 
 
   delay(100);
 }
